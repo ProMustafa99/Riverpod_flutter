@@ -94,5 +94,5 @@ class SearchGitHubNotifier extends AsyncNotifier<Map<String, dynamic>> {
 
 final searchGitHubProvider =
     AsyncNotifierProvider<SearchGitHubNotifier, Map<String, dynamic>>(
-      SearchGitHubNotifier.new,
+      SearchGitHubNotifier.new, 
     );
