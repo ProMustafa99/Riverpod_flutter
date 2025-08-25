@@ -18,8 +18,8 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      // home: SearchGitHub(),
-      home: const GoogleMapScreen(),
+      home: SearchGitHub(),
+      // home: const GoogleMapScreen(),
     );
   }
 }

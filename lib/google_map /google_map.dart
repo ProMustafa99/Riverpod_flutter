@@ -26,6 +26,7 @@ class _GoogleMapScreenState extends State<GoogleMapScreen> {
 
   Future<void> _getCurrentLocation() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    
     if (!serviceEnabled) {
       _showLocationDialog(
         'Location Services Disabled',
