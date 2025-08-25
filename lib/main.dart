@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_flutter/porvider/simple_provider.dart';
+import 'google_map /google_map.dart';
 
 void main() {
   // ProviderScope is a widget that stores all provider states globally
@@ -17,7 +18,8 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: SearchGitHub(),
+      // home: SearchGitHub(),
+      home: const GoogleMapScreen(),
     );
   }
 }
@@ -47,21 +49,21 @@ class _SearchGitHubState extends ConsumerState<SearchGitHub> {
   final ScrollController _scrollController = ScrollController();
 
   @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      _loadMore();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final githubData = ref.watch(searchGitHubProvider);
-
-    // Add scroll listener for infinite scroll
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        print('scrollController hasClients');
-        _scrollController.addListener(() {
-          if (_scrollController.position.pixels >=
-              _scrollController.position.maxScrollExtent - 200) {
-            _loadMore();
-          }
-        });
-      }
-    });
 
     return Scaffold(
       appBar: AppBar(
@@ -70,7 +72,7 @@ class _SearchGitHubState extends ConsumerState<SearchGitHub> {
           IconButton(
             icon: const Icon(Icons.clear_all),
             onPressed: () {
-              // ref.read(searchGitHubProvider.notifier).clearCache();
+              ref.read(searchGitHubProvider.notifier).clearCache();
               textController.clear();
             },
             tooltip: 'Clear Cache',
@@ -138,30 +140,35 @@ class _SearchGitHubState extends ConsumerState<SearchGitHub> {
                         ],
                       ),
                     ),
-                    
+
                     // Repository list
                     Expanded(
                       child: ListView.builder(
                         controller: _scrollController,
-                        itemCount: (githubData['items'] as List).length,
+                        itemCount:
+                            (githubData['items'] as List).length +
+                            (githubData['isLoadingMore'] == true ? 1 : 0),
                         itemBuilder: (context, index) {
                           if (index == (githubData['items'] as List).length) {
                             // Loading indicator at the bottom
                             return const Padding(
                               padding: EdgeInsets.all(16.0),
-                              child: Center(
-                                child: CircularProgressIndicator(),
-                              ),
+                              child: Center(child: CircularProgressIndicator()),
                             );
                           }
-                          
+
                           final item = (githubData['items'] as List)[index];
                           return Card(
-                            margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+                            margin: const EdgeInsets.symmetric(
+                              horizontal: 16.0,
+                              vertical: 4.0,
+                            ),
                             child: ListTile(
                               title: Text(
                                 item['full_name']?.toString() ?? 'No title',
-                                style: const TextStyle(fontWeight: FontWeight.w600),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                               subtitle: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -175,21 +182,34 @@ class _SearchGitHubState extends ConsumerState<SearchGitHub> {
                                   const SizedBox(height: 4),
                                   Row(
                                     children: [
-                                      const Icon(Icons.star, size: 16, color: Colors.amber),
+                                      const Icon(
+                                        Icons.star,
+                                        size: 16,
+                                        color: Colors.amber,
+                                      ),
                                       const SizedBox(width: 4),
                                       Text(
-                                        '${item['stargazers_count']?.toString() ?? '0'}',
+                                        item['stargazers_count']?.toString() ??
+                                            '0',
                                         style: const TextStyle(fontSize: 12),
                                       ),
                                       const SizedBox(width: 16),
-                                      const Icon(Icons.call_split, size: 16, color: Colors.green),
+                                      const Icon(
+                                        Icons.call_split,
+                                        size: 16,
+                                        color: Colors.green,
+                                      ),
                                       const SizedBox(width: 4),
                                       Text(
-                                        '${item['forks_count']?.toString() ?? '0'}',
+                                        item['forks_count']?.toString() ?? '0',
                                         style: const TextStyle(fontSize: 12),
                                       ),
                                       const SizedBox(width: 16),
-                                      const Icon(Icons.language, size: 16, color: Colors.blue),
+                                      const Icon(
+                                        Icons.language,
+                                        size: 16,
+                                        color: Colors.blue,
+                                      ),
                                       const SizedBox(width: 4),
                                       Text(
                                         item['language']?.toString() ?? 'N/A',
@@ -203,7 +223,9 @@ class _SearchGitHubState extends ConsumerState<SearchGitHub> {
                                 // Could open repository URL here
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                    content: Text('Selected: ${item['full_name']}'),
+                                    content: Text(
+                                      'Selected: ${item['full_name']}',
+                                    ),
                                     duration: const Duration(seconds: 1),
                                   ),
                                 );
@@ -263,12 +285,13 @@ class _SearchGitHubState extends ConsumerState<SearchGitHub> {
   void _loadMore() {
     final currentData = ref.read(searchGitHubProvider);
     final hasMore = currentData.value?['hasMore'] as bool? ?? false;
-    // final isLoadingMore = ref.read(searchGitHubProvider.notifier).isLoadingMore;
-    
-    if (hasMore && textController.text.isNotEmpty) {
+    final isLoadingMore = currentData.value?['isLoadingMore'] as bool? ?? false;
+    final currentPage = currentData.value?['currentPage'] as int? ?? 1;
+
+    if (hasMore && textController.text.isNotEmpty && !isLoadingMore) {
       ref
           .read(searchGitHubProvider.notifier)
-          .searchGitHub(textController.text, 1);
+          .searchGitHub(textController.text, currentPage + 1);
     }
   }
 
@@ -302,5 +325,69 @@ Widget message() {
         ),
       ],
     ),
+  );
+}
+
+Widget paginationNumber(
+  int maxNumberOfPages,
+  WidgetRef ref,
+  String searchQuery,
+) {
+  final currentPage = ref.watch(pageNotifier);
+  const visibleCount = 5; // show max 5 buttons
+
+  debugPrint('Current Page: $currentPage');
+  debugPrint('Max Number of Pages: $maxNumberOfPages');
+  debugPrint('Visible Count: $visibleCount');
+  debugPrint('Visible Count Call: ${visibleCount ~/ 2}');
+  debugPrint('Start: ${currentPage - (visibleCount ~/ 2)}');
+  debugPrint('End: ${currentPage + (visibleCount ~/ 2)}');
+
+  // clamp (lowerlimit, upperlimit)
+  // Determine start & end window
+  int start = (currentPage - (visibleCount ~/ 2)).clamp(
+    1,
+    maxNumberOfPages - visibleCount + 1,
+  );
+  debugPrint('StartClamp: $start');
+  int end = (start + visibleCount - 1).clamp(1, maxNumberOfPages);
+  debugPrint('EndClamp: $end');
+
+  return Wrap(
+    spacing: 6,
+    children: List.generate(end - start + 1, (index) {
+      final page = start + index;
+      final isActive = page == currentPage;
+
+      return TextButton(
+        onPressed: () {
+          ref.read(pageNotifier.notifier).state = page;
+          // Trigger new search with updated page
+          if (searchQuery.isNotEmpty) {
+            ref
+                .read(searchGitHubProvider.notifier)
+                .searchGitHub(searchQuery, page);
+          }
+        },
+        style: TextButton.styleFrom(padding: EdgeInsets.zero),
+        child: Container(
+          width: 36,
+          height: 36,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: isActive ? Colors.blue : Colors.white,
+            border: Border.all(color: Colors.blue),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(
+            '$page',
+            style: TextStyle(
+              color: isActive ? Colors.white : Colors.black,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      );
+    }),
   );
 }

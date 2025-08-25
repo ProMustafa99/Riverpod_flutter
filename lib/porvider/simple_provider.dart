@@ -43,13 +43,19 @@ class SearchGitHubNotifier extends AsyncNotifier<Map<String, dynamic>> {
       state = AsyncData(_cache[cacheKey]!);
       return;
     } else {
-      state = const AsyncLoading();
-
       if (page == 1) {
         state = const AsyncLoading();
       } else {
-        // _isLoadingMore = true;
+        // Keep current data while loading more
+        final currentState = state.value;
+        if (currentState != null) {
+          state = AsyncData({
+            ...currentState,
+            'isLoadingMore': true,
+          });
+        }
       }
+      
       try {
         final dio = Dio();
         final response = await dio.get(
@@ -66,14 +72,33 @@ class SearchGitHubNotifier extends AsyncNotifier<Map<String, dynamic>> {
         final perPage = 10;
         final totalCount = response.data['total_count'] as int;
         final totalPages = (totalCount / perPage).ceil();
+        final newItems = List<Map<String, dynamic>>.from(response.data['items']);
 
-        final result = {
-          'items': List<Map<String, dynamic>>.from(response.data['items']),
-          'totalCount': totalCount,
-          'currentPage': page,
-          'totalPages': totalPages,
-          'hasMore': page < totalPages,
-        };
+        Map<String, dynamic> result;
+        
+        if (page == 1) {
+          // First page - replace all items
+          result = {
+            'items': newItems,
+            'totalCount': totalCount,
+            'currentPage': page,
+            'totalPages': totalPages,
+            'hasMore': page < totalPages,
+            'isLoadingMore': false,
+          };
+        } else {
+          // Subsequent pages - append to existing items
+          final currentState = state.value;
+          final existingItems = currentState?['items'] as List<Map<String, dynamic>>? ?? [];
+          result = {
+            'items': [...existingItems, ...newItems],
+            'totalCount': totalCount,
+            'currentPage': page,
+            'totalPages': totalPages,
+            'hasMore': page < totalPages,
+            'isLoadingMore': false,
+          };
+        }
 
         // Save result to cache
         if (_cache.length >= 2) {
@@ -89,6 +114,11 @@ class SearchGitHubNotifier extends AsyncNotifier<Map<String, dynamic>> {
         state = AsyncError(e, st);
       }
     }
+  }
+
+  void clearCache() {
+    _cache.clear();
+    state = const AsyncData({});
   }
 }
 

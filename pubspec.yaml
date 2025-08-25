@@ -39,6 +39,11 @@ dependencies:
   build_runner: ^2.7.0
   dio: ^5.9.0
   number_pagination: ^1.1.6
+  
+  # Google Maps dependencies
+  google_maps_flutter: ^2.12.3
+  geolocator: ^14.0.2
+  geocoding: ^4.0.0
 
 dev_dependencies:
   flutter_test:
